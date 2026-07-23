@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   wireguard:
     image: lscr.io/linuxserver/wireguard:latest
@@ -16,7 +14,7 @@ services:
       - /lib/modules:/lib/modules
     # Host-Networking ist noetig, damit Traffic ueber den Tunnel (10.10.0.2:30013)
     # direkt beim Jellyfin-NodePort auf dem NAS-Host ankommt.
+    # Kein "sysctls:" hier -- mit network_mode: host verbietet Docker
+    # container-eigene Netzwerk-Sysctls (betraeft sonst den Host direkt).
     network_mode: host
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
     restart: unless-stopped
