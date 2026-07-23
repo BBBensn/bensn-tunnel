@@ -1,0 +1,10 @@
+[Interface]
+# Hetzner-Server — WireGuard Server
+Address = 10.10.0.1/24
+ListenPort = 51820
+PrivateKey = <HETZNER_PRIVATE_KEY>
+
+[Peer]
+# NAS "atlas" (TrueNAS SCALE, zuhause hinter NAT)
+PublicKey = <NAS_PUBLIC_KEY>
+AllowedIPs = 10.10.0.2/32

@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard-tunnel
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=568
+      - PGID=568
+      - TZ=Europe/Vienna
+    volumes:
+      - ./wg-confs:/config
+      - /lib/modules:/lib/modules
+    # Host-Networking ist noetig, damit Traffic ueber den Tunnel (10.10.0.2:30013)
+    # direkt beim Jellyfin-NodePort auf dem NAS-Host ankommt.
+    network_mode: host
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped

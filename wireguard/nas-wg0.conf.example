@@ -1,0 +1,11 @@
+[Interface]
+# NAS "atlas" (TrueNAS SCALE) — WireGuard Client
+Address = 10.10.0.2/24
+PrivateKey = <NAS_PRIVATE_KEY>
+
+[Peer]
+# Hetzner-Server
+PublicKey = <HETZNER_PUBLIC_KEY>
+Endpoint = 178.104.133.228:51820
+AllowedIPs = 10.10.0.0/24
+PersistentKeepalive = 25
