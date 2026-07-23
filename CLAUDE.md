@@ -15,8 +15,8 @@ Ablageort: `~/Documents/Coding/bensn-tunnel/CLAUDE.md`
 - **Name:** bensn-tunnel
 - **Domain:** stream.bensn.me (v1.0.0), weitere Subdomains folgen (Cloud/Nextcloud geplant)
 - **Version:** v1.0.0
-- **Status:** active — Hetzner-Seite (WireGuard-Server, nginx, Zertifikat) live. NAS-Client
-  (Ort: direkt auf TrueNAS via Docker-Compose) noch vom Nutzer vor Ort einzurichten.
+- **Status:** ✅ v1.0.0 komplett live — Tunnel steht, `https://stream.bensn.me` erreichbar
+  und liefert Jellyfin aus.
 - **Stack:** WireGuard (VPN-Tunnel Hetzner ↔ NAS) + nginx (Reverse Proxy). Kein klassisches
   Frontend/Backend — reines Infra-/Netzwerk-Projekt.
 
@@ -65,9 +65,14 @@ direkt auf TrueNAS SCALE. Config-Pfad auf dem NAS: vom Nutzer selbst festzulegen
 | Jellyfin intern | 30013 (TrueNAS-App-NodePort) | NAS, über Tunnel (10.10.0.2:30013) |
 | Tunnel-Subnetz | 10.10.0.0/24 | Hetzner = .1, NAS = .2 |
 
-⚠️ Hetzner-Firewall (`ufw`) ist aktuell **inaktiv** — kein Port ist dort gesperrt, 51820/udp
-war also ohnehin offen. Falls eine Firewall gewünscht ist, muss der Nutzer sie selbst
-einrichten (Claude Code fasst Security-Settings nicht an).
+⚠️ Hetzner-`ufw` (Betriebssystem-Firewall) ist inaktiv — irrelevant hier.
+
+⚠️ **Wichtig:** Hetzner Cloud hat zusätzlich eine separate Cloud-Firewall (Infrastruktur-
+Ebene, verwaltet über die Hetzner Cloud Console, nicht über den Server selbst). `firewall-1`
+ist auf den Server angewendet und musste um eine Regel **UDP 51820** (Any IPv4/IPv6)
+ergänzt werden — ohne die kommt WireGuard-Traffic nie beim Server an, auch wenn `ufw`
+und `wg0` lokal korrekt konfiguriert sind. Bei neuen eingehenden Ports (z. B. für
+`cloud.bensn.me` später) immer auch dort eine Regel ergänzen, nicht nur im Server-OS.
 
 ---
 
@@ -133,24 +138,45 @@ bleibt lokal/auf dem Server, nie im Repo.
 
 | Version | Feature | Status |
 |---------|---------|--------|
-| v1.0.0 | WireGuard-Tunnel Hetzner↔NAS + Jellyfin über stream.bensn.me erreichbar | Hetzner-Seite ✅ done, NAS-Client offen (Nutzer) |
+| v1.0.0 | WireGuard-Tunnel Hetzner↔NAS + Jellyfin über stream.bensn.me erreichbar | ✅ done |
 | v1.1.0 | Cloud-Dienst (Nextcloud o.ä.) auf NAS über selben Tunnel erreichbar machen | geplant |
 | v1.2.0 | Monitoring/Alerting für Tunnel-Verfügbarkeit (z. B. via Grafana/weather-stack-Muster) | geplant |
 
 ---
 
-## NAS-Setup (noch zu erledigen, vor Ort)
+## NAS-Setup (Stand v1.0.0, erledigt)
 
-1. Ordner auf dem NAS anlegen, z. B. `/mnt/<pool>/wireguard-tunnel/`
-2. `wireguard/nas-docker-compose.yml.example` dorthin kopieren (ohne `.example`) und
-   `nas-wg0.conf` (echte Datei, liegt lokal unter `wireguard/nas-wg0.conf`, NICHT im Git-Repo)
-   nach `<ordner>/config/wg_confs/wg0.conf` legen — **wichtig:** `linuxserver/wireguard`
-   erwartet die Interface-Config genau in `/config/wg_confs/`, nicht direkt in `/config/`
-3. `docker compose -f nas-docker-compose.yml up -d` (SSH-Zugriff auf TrueNAS nötig) —
-   läuft mit `network_mode: host`, damit Tunnel-Traffic auf `10.10.0.2:30013` direkt beim
-   Jellyfin-NodePort auf dem NAS-Host ankommt
-4. Prüfen: von Hetzner aus `ping 10.10.0.2` sollte antworten
-5. Test: `https://stream.bensn.me` im Browser öffnen
+Läuft unter `/mnt/atlas/wireguard-tunnel/` auf der NAS als Docker-Compose-Container
+(`nas-docker-compose.yml`, `linuxserver/wireguard`, `network_mode: host`), Config unter
+`config/wg_confs/wg0.conf`. Start/Neustart:
+
+```bash
+ssh truenas_admin@192.168.0.63
+cd /mnt/atlas/wireguard-tunnel
+sudo docker compose -f nas-docker-compose.yml up -d
+sudo docker compose -f nas-docker-compose.yml logs -f
+```
+
+SSH-Zugriff auf die NAS: `truenas_admin@192.168.0.63`, Key-Auth (gleicher Key wie `ssh bensn`),
+passwordless sudo über TrueNAS-User-Einstellung "Sudo Commands (No Password): ALL" aktiviert.
+
+### Gefundene & behobene Probleme beim Ersteinrichten
+
+1. **Compose-Volume-Pfad falsch:** `linuxserver/wireguard` erwartet die Interface-Config
+   unter `/config/wg_confs/wg0.conf`, nicht direkt `/config/wg0.conf` — Volume muss
+   `./config:/config` sein, Datei liegt dann in `config/wg_confs/wg0.conf`.
+2. **`sysctls` inkompatibel mit `network_mode: host`:** Docker verbietet container-eigene
+   Netzwerk-Sysctls bei Host-Networking (`net.ipv4.conf.all.src_valid_mark` wurde entfernt,
+   war für unseren einfachen Punkt-zu-Punkt-Tunnel ohnehin nicht nötig).
+3. **Kein Default-Gateway auf der NAS:** TrueNAS Global Configuration hatte ein manuell
+   gesetztes `IPv4 Default Gateway` (`192.168.0.1`), obwohl das Interface `enp6s0` per DHCP
+   läuft — Konflikt führte dazu, dass gar keine Default-Route aktiv war (`state.ipv4gateway`
+   leer trotz gesetztem Wert). Fix: Gateway-Feld in Global Configuration geleert, DHCP liefert
+   das Gateway jetzt automatisch mit.
+4. **Hetzner Cloud-Firewall blockte UDP 51820:** `firewall-1` (angewendet auf den Hetzner-
+   Server) hatte nur TCP 22/80/443/3000/5000 + ICMP eingehend erlaubt — WireGuard-Pakete
+   wurden schon vor dem Server verworfen, unabhängig vom lokalen `ufw`. Regel `UDP 51820`
+   (Any IPv4/IPv6) ergänzt.
 
 ---
 
