@@ -144,10 +144,11 @@ bleibt lokal/auf dem Server, nie im Repo.
 1. Ordner auf dem NAS anlegen, z. B. `/mnt/<pool>/wireguard-tunnel/`
 2. `wireguard/nas-docker-compose.yml.example` dorthin kopieren (ohne `.example`) und
    `nas-wg0.conf` (echte Datei, liegt lokal unter `wireguard/nas-wg0.conf`, NICHT im Git-Repo)
-   nach `<ordner>/wg-confs/wg0.conf` legen
-3. `docker compose up -d` (SSH-Zugriff auf TrueNAS nötig) — läuft mit `network_mode: host`,
-   damit Tunnel-Traffic auf `10.10.0.2:30013` direkt beim Jellyfin-NodePort auf dem
-   NAS-Host ankommt
+   nach `<ordner>/config/wg_confs/wg0.conf` legen — **wichtig:** `linuxserver/wireguard`
+   erwartet die Interface-Config genau in `/config/wg_confs/`, nicht direkt in `/config/`
+3. `docker compose -f nas-docker-compose.yml up -d` (SSH-Zugriff auf TrueNAS nötig) —
+   läuft mit `network_mode: host`, damit Tunnel-Traffic auf `10.10.0.2:30013` direkt beim
+   Jellyfin-NodePort auf dem NAS-Host ankommt
 4. Prüfen: von Hetzner aus `ping 10.10.0.2` sollte antworten
 5. Test: `https://stream.bensn.me` im Browser öffnen
 

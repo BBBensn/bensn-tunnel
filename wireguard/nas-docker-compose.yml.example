@@ -12,7 +12,7 @@ services:
       - PGID=568
       - TZ=Europe/Vienna
     volumes:
-      - ./wg-confs:/config
+      - ./config:/config
       - /lib/modules:/lib/modules
     # Host-Networking ist noetig, damit Traffic ueber den Tunnel (10.10.0.2:30013)
     # direkt beim Jellyfin-NodePort auf dem NAS-Host ankommt.
