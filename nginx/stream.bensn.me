@@ -19,9 +19,13 @@ server {
         # Floating Link zur eigenen Wishlist/Bestandsliste (library.bensn.me)
         # injizieren - unabhaengig von Jellyfins eigenem CSS/JS, uebersteht
         # Jellyfin-App-Updates, da nichts an Jellyfins Dateien geaendert wird.
+        # Ein-/Ausblenden per JS je nach aktueller Ansicht (Jellyfin ist eine
+        # Single-Page-App, daher clientseitig statt per Nginx-Routing geloest):
+        # sichtbar auf Login/Home/Uebersichten, ausgeblendet bei Detailseiten,
+        # laufender Wiedergabe und Einstellungen.
         proxy_set_header Accept-Encoding "";
         sub_filter_once on;
-        sub_filter '</body>' '<a href="https://library.bensn.me" target="_blank" rel="noopener" style="position:fixed;bottom:20px;right:20px;z-index:2147483647;display:flex;align-items:center;gap:8px;padding:10px 16px;background:#111113;border:1px solid rgba(255,255,255,0.15);border-radius:999px;color:#e8e6e0;font-family:DM Mono,monospace;font-size:12px;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.4)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00A6FB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21C12 21 4 14.5 4 8.75C4 5.75 6.5 3.5 9.25 3.5C10.86 3.5 12 4.5 12 4.5C12 4.5 13.14 3.5 14.75 3.5C17.5 3.5 20 5.75 20 8.75C20 14.5 12 21 12 21Z"></path></svg>Wishlist &amp; Bestand</a></body>';
+        sub_filter "</body>" "<a id='bensn-lib-link' href='https://library.bensn.me' target='_blank' rel='noopener' style='position:fixed;bottom:20px;right:20px;z-index:2147483647;display:flex;align-items:center;gap:8px;padding:10px 16px;background:#111113;border:1px solid rgba(255,255,255,0.15);border-radius:999px;color:#e8e6e0;font-family:DM Mono,monospace;font-size:12px;text-decoration:none;box-shadow:0 4px 20px rgba(0,0,0,0.4)'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#00A6FB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21C12 21 4 14.5 4 8.75C4 5.75 6.5 3.5 9.25 3.5C10.86 3.5 12 4.5 12 4.5C12 4.5 13.14 3.5 14.75 3.5C17.5 3.5 20 5.75 20 8.75C20 14.5 12 21 12 21Z'></path></svg>Wishlist &amp; Bestand</a><script>(function(){var el=document.getElementById('bensn-lib-link');var hide=/details|video|osd|nowplaying|preferences|settings|dashboard|metadata|userprofile|playback|livetv/i;function upd(){var h=window.location.hash||'';var v=document.querySelector('video');var playing=v&&!v.paused&&!v.ended;el.style.display=(playing||hide.test(h))?'none':'flex';}window.addEventListener('hashchange',upd);window.addEventListener('popstate',upd);setInterval(upd,700);upd();})();</script></body>";
     }
 
     listen 443 ssl; # managed by Certbot
